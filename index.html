@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banff Voting</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f3f0;
+            color: #1a1a1a;
+        }
+        h1 { margin-top: 0; }
+        h2 { font-size: 18px; margin-top: 2rem; margin-bottom: 1rem; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        textarea { min-height: 60px; resize: vertical; }
+        button {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 8px;
+            margin-top: 10px;
+        }
+        button:hover { background: #f0f0f0; }
+        .star-group {
+            display: flex;
+            gap: 4px;
+            margin: 8px 0;
+            align-items: center;
+        }
+        .star {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            opacity: 0.3;
+        }
+        .star.active { opacity: 1; }
+        .activity {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 1rem;
+        }
+        .activity-image {
+            flex-shrink: 0;
+            width: 140px;
+            height: 140px;
+            border-radius: 6px;
+            background: #e0e0e0;
+            overflow: hidden;
+        }
+        .activity-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .activity-content {
+            flex: 1;
+        }
+        .activity-name { font-weight: 500; margin-bottom: 8px; }
+        .submission {
+            background: #faf9f7;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .submission-header {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .submission-date { font-size: 12px; color: #666; }
+        .success { background: #e8f5e9; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
+        .vote-line { font-size: 13px; margin: 4px 0; }
+        .comment { font-style: italic; font-size: 12px; color: #666; margin-left: 8px; }
+        @media (prefers-color-scheme: dark) {
+            body { background: #1a1a1a; color: #f5f3f0; }
+            input, textarea { background: #2a2a2a; color: #f5f3f0; border-color: #444; }
+            button { background: #2a2a2a; border-color: #444; color: #f5f3f0; }
+            .activity { border-color: #333; }
+            .submission { background: #242424; border-color: #333; }
+            .success { background: #1b3d0a; }
+        }
+        @media (max-width: 600px) {
+            .activity {
+                flex-direction: column;
+            }
+            .activity-image {
+                width: 100%;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Banff activities voting</h1>
+    <div id="app"></div>
+
+    <script>
+        const ACTIVITIES = [
+            { category: 'Lakes & Water', name: 'Two Jack Lake shoreline walk' },
+            { category: 'Lakes & Water', name: 'Two Jack Lake sunrise/sunset' },
+            { category: 'Lakes & Water', name: 'Lake Minnewanka boat cruise' },
+            { category: 'Lakes & Water', name: 'Johnson Lake swimming/paddling' },
+            { category: 'Lakes & Water', name: 'Cascade Ponds walk' },
+            { category: 'Short Easy Walks', name: 'Lake Minnewanka Day-Use Area walk' },
+            { category: 'Short Easy Walks', name: 'Cascade Ponds pathway' },
+            { category: 'Banff Town Waterfalls', name: 'Bow Falls Trail' },
+            { category: 'Banff Town Waterfalls', name: 'Bow Falls to Hoodoos Trail' },
+            { category: 'Banff Town', name: 'Sulphur Mountain Gondola' },
+            { category: 'Banff Town', name: 'Cave and Basin National Historic Site' },
+            { category: 'Banff Town', name: 'Banff Avenue exploration' },
+            { category: 'Hiking', name: 'Johnston Canyon Lower Falls' },
+            { category: 'Hiking', name: 'Johnston Canyon Upper Falls' },
+            { category: 'Lake Louise', name: 'Lake Louise shoreline walk' },
+            { category: 'Lake Louise', name: 'Lake Agnes Tea House hike' },
+            { category: 'Lake Louise', name: 'Plain of Six Glaciers Trail' },
+            { category: 'Lake Louise', name: 'Moraine Lake Rockpile' },
+            { category: 'Icefields Parkway', name: 'Peyto Lake Lookout' },
+            { category: 'Icefields Parkway', name: 'Athabasca Glacier' },
+            { category: 'Yoho National Park', name: 'Emerald Lake' },
+            { category: 'Yoho National Park', name: 'Takakkaw Falls' },
+            { category: 'Water Activities', name: 'Canoeing/kayaking Lake Louise' },
+            { category: 'Wildlife Viewing', name: 'Early morning elk spotting' },
+        ];
+
+        let votes = {};
+        let comments = {};
+        let name = '';
+        let allSubmissions = [];
+        let submitted = false;
+        let imageMap = {};
+
+        function loadImages() {
+            fetch('banff_options_image_urls__1_.json')
+                .then(r => r.json())
+                .then(data => {
+                    imageMap = data;
+                    render();
+                })
+                .catch(e => {
+                    console.log('Could not load images');
+                    render();
+                });
+        }
+
+        function getImageUrl(activityName) {
+            return imageMap[activityName] || imageMap['Lake Louise shoreline walk'];
+        }
+
+        function loadSubmissions() {
+            const stored = localStorage.getItem('banff-votes');
+            if (stored) {
+                allSubmissions = JSON.parse(stored);
+            }
+        }
+
+        function saveSubmission() {
+            if (!name.trim()) {
+                alert('Please enter your name');
+                return;
+            }
+            const submission = {
+                name,
+                timestamp: new Date().toISOString(),
+                votes,
+                comments
+            };
+            allSubmissions.push(submission);
+            localStorage.setItem('banff-votes', JSON.stringify(allSubmissions));
+            submitted = true;
+            votes = {};
+            comments = {};
+            render();
+        }
+
+        function exportJSON() {
+            const json = JSON.stringify(allSubmissions, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'banff-votes.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function reset() {
+            name = '';
+            votes = {};
+            comments = {};
+            submitted = false;
+            render();
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            let html = '';
+
+            if (!submitted) {
+                html += '<div><input type="text" id="name-input" placeholder="Your name" value="' + name + '" style="margin-bottom: 1.5rem;">';
+                html += '<button onclick="setName(document.getElementById(\'name-input\').value); render();">Next</button></div>';
+
+                if (name) {
+                    const grouped = {};
+                    ACTIVITIES.forEach(a => {
+                        if (!grouped[a.category]) grouped[a.category] = [];
+                        grouped[a.category].push(a.name);
+                    });
+
+                    html += '<form onsubmit="submitVotes(event)">';
+                    Object.entries(grouped).forEach(([cat, items]) => {
+                        html += '<h2>' + cat + '</h2>';
+                        items.forEach(activity => {
+                            const imgUrl = getImageUrl(activity);
+                            const commentId = activity.replace(/[^a-z0-9]/gi, '-');
+                            html += '<div class="activity">';
+                            if (imgUrl) {
+                                html += '<div class="activity-image"><img src="' + imgUrl + '" alt="' + activity + '" onerror="this.style.display=\'none\'"></div>';
+                            }
+                            html += '<div class="activity-content">';
+                            html += '<div class="activity-name">' + activity + '</div>';
+                            html += '<div class="star-group">';
+                            for (let i = 1; i <= 5; i++) {
+                                const active = votes[activity] >= i ? ' active' : '';
+                                html += '<button type="button" class="star' + active + '" onclick="setVote(\'' + activity.replace(/'/g, "\\'") + '\', ' + i + '); render();">★</button>';
+                            }
+                            if (votes[activity]) {
+                                html += '<span style="margin-left: 8px; font-size: 12px; color: #666;">(' + votes[activity] + '/5)</span>';
+                            }
+                            html += '</div>';
+                            html += '<textarea id="comment-' + commentId + '" placeholder="Comment (optional)" onchange="setComment(\'' + activity.replace(/'/g, "\\'") + '\', this.value);">' + (comments[activity] || '') + '</textarea>';
+                            html += '</div>';
+                            html += '</div>';
+                        });
+                    });
+                    html += '<button type="submit">Submit votes</button>';
+                    html += '<button type="button" onclick="reset();">Clear</button>';
+                    html += '</form>';
+                }
+            } else {
+                html += '<div class="success"><p>Thanks ' + name + '! Your votes are saved.</p>';
+                html += '<button onclick="reset();">Add another person</button></div>';
+            }
+
+            if (allSubmissions.length > 0) {
+                html += '<h2>Submissions (' + allSubmissions.length + ')</h2>';
+                html += '<button onclick="exportJSON();">Download JSON</button>';
+                allSubmissions.forEach(sub => {
+                    html += '<div class="submission">';
+                    html += '<div class="submission-header">' + sub.name + '<span class="submission-date">' + new Date(sub.timestamp).toLocaleDateString() + '</span></div>';
+                    Object.entries(sub.votes).forEach(([activity, rating]) => {
+                        const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                        html += '<div class="vote-line">' + activity + ': ' + stars;
+                        if (sub.comments[activity]) {
+                            html += '<span class="comment">"' + sub.comments[activity] + '"</span>';
+                        }
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                });
+            }
+
+            app.innerHTML = html;
+        }
+
+        function setName(n) { name = n; }
+        function setVote(activity, rating) { votes[activity] = rating; }
+        function setComment(activity, text) { comments[activity] = text; }
+        function submitVotes(e) {
+            e.preventDefault();
+            saveSubmission();
+        }
+
+        loadSubmissions();
+        loadImages();
+    </script>
+</body>
+</html>
