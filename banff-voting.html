@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banff Activities Voting</title>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/react.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/react-dom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/tabler-icons.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            background-color: #f5f3f0;
+            color: #1a1a1a;
+            padding: 20px;
+            margin: 0;
+        }
+        #root {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0ccc7;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:hover,
+        textarea:hover {
+            border-color: #b4b2a9;
+        }
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #534AB7;
+            box-shadow: 0 0 0 2px rgba(83, 74, 183, 0.1);
+        }
+        button {
+            background: white;
+            border: 1px solid #d0ccc7;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button:hover {
+            background-color: #f9f8f6;
+            border-color: #b4b2a9;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: 500;
+            margin: 0 0 1.5rem 0;
+        }
+        h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 1.5rem 0 1rem 0;
+        }
+        .star-rating {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .star-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+            color: #1a1a1a;
+        }
+        .star-btn.active {
+            opacity: 1;
+        }
+        .activity-item {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e8e6e1;
+        }
+        .activity-name {
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .submission-card {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: #faf9f7;
+            border-radius: 8px;
+            border: 1px solid #e8e6e1;
+        }
+        .submission-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-size: 14px;
+        }
+        .submission-name {
+            font-weight: 500;
+        }
+        .submission-date {
+            color: #888780;
+            font-size: 12px;
+        }
+        .submission-votes {
+            font-size: 13px;
+            color: #5f5e5a;
+        }
+        .vote-item {
+            margin-bottom: 8px;
+        }
+        .vote-item-comment {
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            font-style: italic;
+            color: #888780;
+        }
+        .success-message {
+            padding: 1rem;
+            background-color: #eaf3de;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 14px;
+            border: 1px solid #c0dd97;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 2rem;
+        }
+        .submissions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1a1a1a;
+                color: #f5f3f0;
+            }
+            input[type="text"],
+            textarea {
+                background-color: #2a2a2a;
+                color: #f5f3f0;
+                border-color: #444441;
+            }
+            button {
+                background: #2a2a2a;
+                border-color: #444441;
+                color: #f5f3f0;
+            }
+            button:hover {
+                background-color: #3a3a3a;
+                border-color: #5f5e5a;
+            }
+            h2, h3, .submission-name {
+                color: #f5f3f0;
+            }
+            .activity-item {
+                border-color: #3a3a3a;
+            }
+            .submission-card {
+                background-color: #242424;
+                border-color: #3a3a3a;
+            }
+            .success-message {
+                background-color: #1b3d0a;
+                border-color: #3b6d11;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const activities = [
+            { category: 'Lakes & Water', name: 'Two Jack Lake shoreline walk' },
+            { category: 'Lakes & Water', name: 'Two Jack Lake sunrise/sunset' },
+            { category: 'Lakes & Water', name: 'Lake Minnewanka boat cruise' },
+            { category: 'Lakes & Water', name: 'Johnson Lake swimming/paddling' },
+            { category: 'Lakes & Water', name: 'Cascade Ponds walk' },
+            { category: 'Short Easy Walks', name: 'Lake Minnewanka Day-Use Area walk' },
+            { category: 'Short Easy Walks', name: 'Cascade Ponds pathway' },
+            { category: 'Banff Town Waterfalls', name: 'Bow Falls Trail' },
+            { category: 'Banff Town Waterfalls', name: 'Bow Falls to Hoodoos Trail' },
+            { category: 'Banff Town', name: 'Sulphur Mountain Gondola' },
+            { category: 'Banff Town', name: 'Cave and Basin National Historic Site' },
+            { category: 'Banff Town', name: 'Banff Avenue exploration' },
+            { category: 'Hiking', name: 'Johnston Canyon Lower Falls' },
+            { category: 'Hiking', name: 'Johnston Canyon Upper Falls' },
+            { category: 'Lake Louise', name: 'Lake Louise shoreline walk' },
+            { category: 'Lake Louise', name: 'Lake Agnes Tea House hike' },
+            { category: 'Lake Louise', name: 'Plain of Six Glaciers Trail' },
+            { category: 'Lake Louise', name: 'Moraine Lake Rockpile' },
+            { category: 'Icefields Parkway', name: 'Peyto Lake Lookout' },
+            { category: 'Icefields Parkway', name: 'Athabasca Glacier' },
+            { category: 'Yoho National Park', name: 'Emerald Lake' },
+            { category: 'Yoho National Park', name: 'Takakkaw Falls' },
+            { category: 'Water Activities', name: 'Canoeing/kayaking Lake Louise' },
+            { category: 'Wildlife Viewing', name: 'Early morning elk spotting' },
+        ];
+
+        function BanffVoting() {
+            const [name, setName] = useState('');
+            const [votes, setVotes] = useState({});
+            const [comments, setComments] = useState({});
+            const [allSubmissions, setAllSubmissions] = useState([]);
+            const [submitted, setSubmitted] = useState(false);
+
+            useEffect(() => {
+                loadSubmissions();
+            }, []);
+
+            const loadSubmissions = () => {
+                try {
+                    const stored = localStorage.getItem('banff-submissions');
+                    if (stored) {
+                        setAllSubmissions(JSON.parse(stored));
+                    }
+                } catch (e) {
+                    console.log('No prior submissions');
+                }
+            };
+
+            const handleStarClick = (activityName, rating) => {
+                setVotes(prev => ({
+                    ...prev,
+                    [activityName]: rating
+                }));
+            };
+
+            const handleCommentChange = (activityName, text) => {
+                setComments(prev => ({
+                    ...prev,
+                    [activityName]: text
+                }));
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!name.trim()) {
+                    alert('Please enter your name');
+                    return;
+                }
+
+                const submission = {
+                    name,
+                    timestamp: new Date().toISOString(),
+                    votes,
+                    comments
+                };
+
+                const updated = [...allSubmissions, submission];
+                try {
+                    localStorage.setItem('banff-submissions', JSON.stringify(updated));
+                    setAllSubmissions(updated);
+                    setSubmitted(true);
+                } catch (e) {
+                    console.error('Storage error:', e);
+                }
+            };
+
+            const handleExportJSON = () => {
+                const dataStr = JSON.stringify(allSubmissions, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'banff-votes.json';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleReset = () => {
+                setName('');
+                setVotes({});
+                setComments({});
+                setSubmitted(false);
+            };
+
+            const groupedActivities = activities.reduce((acc, activity) => {
+                if (!acc[activity.category]) {
+                    acc[activity.category] = [];
+                }
+                acc[activity.category].push(activity.name);
+                return acc;
+            }, {});
+
+            return (
+                <div>
+                    <h2>Banff activities voting</h2>
+
+                    {!submitted ? (
+                        <form onSubmit={handleSubmit}>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px' }}>Your name</label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Enter your name"
+                                />
+                            </div>
+
+                            {Object.entries(groupedActivities).map(([category, items]) => (
+                                <div key={category}>
+                                    <h3>{category}</h3>
+                                    {items.map((activity) => (
+                                        <div key={activity} className="activity-item">
+                                            <div className="activity-name">{activity}</div>
+
+                                            <div className="star-rating">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => handleStarClick(activity, star)}
+                                                        className={`star-btn ${votes[activity] >= star ? 'active' : ''}`}
+                                                    >
+                                                        ★
+                                                    </button>
+                                                ))}
+                                                {votes[activity] && <span style={{ marginLeft: '8px', fontSize: '13px', color: '#888780' }}>({votes[activity]}/5)</span>}
+                                            </div>
+
+                                            <textarea
+                                                value={comments[activity] || ''}
+                                                onChange={(e) => handleCommentChange(activity, e.target.value)}
+                                                placeholder="Leave a comment (optional)"
+                                                style={{ marginTop: '8px', minHeight: '60px' }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+
+                            <div className="button-group">
+                                <button type="submit">
+                                    <i className="ti ti-check"></i>Submit my votes
+                                </button>
+                                <button type="button" onClick={handleReset}>
+                                    <i className="ti ti-refresh"></i>Clear
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div className="success-message">
+                            <p>Thanks {name}! Your votes have been saved.</p>
+                            <button onClick={handleReset}>
+                                <i className="ti ti-plus"></i>Add another person's votes
+                            </button>
+                        </div>
+                    )}
+
+                    {allSubmissions.length > 0 && (
+                        <div style={{ marginTop: '2rem' }}>
+                            <div className="submissions-header">
+                                <h3 style={{ margin: 0 }}>Submissions ({allSubmissions.length})</h3>
+                                <button onClick={handleExportJSON} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                                    <i className="ti ti-download"></i>Export JSON
+                                </button>
+                            </div>
+
+                            {allSubmissions.map((submission, idx) => (
+                                <div key={idx} className="submission-card">
+                                    <div className="submission-header">
+                                        <span className="submission-name">{submission.name}</span>
+                                        <span className="submission-date">
+                                            {new Date(submission.timestamp).toLocaleDateString()}
+                                        </span>
+                                    </div>
+
+                                    <div className="submission-votes">
+                                        {Object.entries(submission.votes).map(([activity, rating]) => (
+                                            <div key={activity} className="vote-item">
+                                                <span>{activity}: </span>
+                                                <span style={{ fontWeight: '500' }}>
+                                                    {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
+                                                </span>
+                                                {submission.comments[activity] && (
+                                                    <div className="vote-item-comment">
+                                                        "{submission.comments[activity]}"
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<BanffVoting />);
+    </script>
+</body>
+</html>
